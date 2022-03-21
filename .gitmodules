@@ -1,3 +1,5 @@
 [submodule "GNCA"]
 	path = gnca
 	url = git@github.com:danielegrattarola/GNCA.git
+[submodule "Submod"]
+	url = https://github.com/riels89/GNCA
