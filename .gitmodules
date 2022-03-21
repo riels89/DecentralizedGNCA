@@ -1,0 +1,3 @@
+[submodule "GNCA"]
+	path = GNCA
+	url = git@github.com:danielegrattarola/GNCA.git
