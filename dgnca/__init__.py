@@ -1,0 +1,1 @@
+from dgnca.decentralized_gnn import DecentralizedGNN
