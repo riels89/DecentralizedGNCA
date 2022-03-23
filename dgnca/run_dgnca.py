@@ -1,14 +1,12 @@
-rank = 0
-
-
 if __name__ == "__main__":
 
     #### Setup ####
 
     # load model
     # load data
-    # use rank to choose data to use
     # Connect to main node
+    # get rank from main node
+    # use rank to choose data to use
 
     ### Main loop ###
     # while no stop signal
