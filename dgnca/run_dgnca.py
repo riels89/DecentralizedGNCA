@@ -7,6 +7,7 @@ if __name__ == "__main__":
     # Connect to main node
     # get rank from main node
     # use rank to choose data to use
+    # connected to neighbors
 
     ### Main loop ###
     # while no stop signal
