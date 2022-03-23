@@ -1,0 +1,15 @@
+lr=0.001
+batch_size=8
+epochs=100000
+batches_in_epoch=10
+es_patience=1000
+lr_patience=750
+tol=1e-06
+lr_red_factor=0.1
+min_steps=10
+max_steps=11
+activation=tanh
+grad_clip=False
+cache_size=1024
+cache_reset_every=32
+outdir=results
