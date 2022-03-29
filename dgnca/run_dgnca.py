@@ -65,19 +65,23 @@ if __name__ == "__main__":
         server.bind ((host, port_seed + i))
         print ("server " + str(i) + " created")
         server.listen (num_procs)
-        #servers.append (server)
         server_node = Node (server, i, port_seed+i, num_procs)
         servers.append (server_node)
         
-        
+    # add communicator sockets to server nodes for 
+    # their neighbors
+    for rank in range (num_procs):
+        for neighbor in neighbors (rank, num_procs):
+            server_communicator = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
+            server_communicator.connect ((host, port_seed + rank))
+            servers[i].addCommunicator (server_communicator, rank)
+            
     #for i in range (num_procs):
         
     # load model
     # load data
 
-    # set up server
-    #server = ThreadedTCPServer ((host, port), ThreadedTCPRequestHandler)
-    
+    # set up server    
     
     # create client proccesses to recieve data 
     # send rank as message

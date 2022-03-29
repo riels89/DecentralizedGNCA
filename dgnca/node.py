@@ -21,4 +21,6 @@ class Node:
     
     def getCommunicator (rank):
         return communicators[rank]
+    def getCommunicators ():
+        return self.communicators
     
