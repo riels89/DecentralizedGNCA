@@ -52,12 +52,20 @@ if __name__ == "__main__":
     port_seed = 5789
     servers = []
     
-    num_procs = int(sys.argv[1])
-    print (num_procs)
-    if (len(sys.argv) > 2 and math.log2(num_procs) % 2 != 0):
+    
+    if (len(sys.argv) != 2):
+        print ("invalid usage: lacking num_proccesses")
+        print ("valid usage: python run_dgnca <num processes>")
+        quit()
+    try:
+        num_procs = int(sys.argv[1])
+        print (num_proc)
+    except ValueError:
         print ("invalid usage: please enter a processes count to a power of 2")
+        print ("valid usage: python run_dgnca <num processes>")
         quit()
 
+    
 
     for i in range (num_procs):
         server = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
@@ -70,11 +78,14 @@ if __name__ == "__main__":
         
     # add communicator sockets to server nodes for 
     # their neighbors
+    sum = 0
     for rank in range (num_procs):
         for neighbor in neighbors (rank, num_procs):
             server_communicator = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
             server_communicator.connect ((host, port_seed + rank))
             servers[i].addCommunicator (server_communicator, rank)
+            sum += 1
+    print (sum)
             
     #for i in range (num_procs):
         
