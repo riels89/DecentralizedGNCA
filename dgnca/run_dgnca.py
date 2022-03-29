@@ -3,6 +3,7 @@ import threading
 import time
 import math
 import sys
+from node import Node
 
 #shameless ripped from python docs
 #class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
@@ -50,22 +51,27 @@ if __name__ == "__main__":
     host = 'localhost'
     port_seed = 5789
     servers = []
+    
     num_procs = int(sys.argv[1])
     print (num_procs)
     if (len(sys.argv) > 2 and math.log2(num_procs) % 2 != 0):
         print ("invalid usage: please enter a processes count to a power of 2")
         quit()
+
+
     for i in range (num_procs):
         server = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
         # binds servers in consective ports
         server.bind ((host, port_seed + i))
         print ("server " + str(i) + " created")
         server.listen (num_procs)
-        servers.append (server)
+        #servers.append (server)
+        server_node = Node (server, i, port_seed+i, num_procs)
+        servers.append (server_node)
         
         
     #for i in range (num_procs):
-        #servers[i].close()
+        
     # load model
     # load data
 
@@ -75,17 +81,7 @@ if __name__ == "__main__":
     
     # create client proccesses to recieve data 
     # send rank as message
-#    client_threads = []
-#    s_time = time.time()
-#    for i in range (num_procs):
-#        client_thread = threading.Thread (target=client, 
-#            args = (ip, port, "message " + str(i), math.log2(num_procs-i), i, num_procs, s_time))
-#        client_threads.append (client_thread)
-#        client_thread.start()
-        
-    # join procs
-#    for i in range (num_procs):
-#        client_threads[i].join()
+#   
     # use rank to choose data to use
     # connect to neighbors using rank
         
