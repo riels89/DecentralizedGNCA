@@ -14,6 +14,7 @@ lock = threading.Lock()
 
 sum = 0
 
+# *** depreciated **** ##
 def client (ip, port, message, wait, id, num_procs, s_time):
     # simulate computation
     time.sleep (wait)
@@ -90,7 +91,6 @@ def messanger_loop (id, node):
         # waits to give other messanger-server threads in node
         # a chance
         # ** MIGHT NOT BE NECESSARY **
-        time.sleep (1)
         
 
 # ** main loop **
@@ -105,12 +105,17 @@ def server_loop (id, node):
         # do work
         # get work in byte stream to send
         # get and set message in node
-        message = "hello from "+ str(node.getId()) + " " + str(iters) + " iters in"
+        message = "hello from "+ str(node.getId()) + ", " + str(iters) + " iters in" 
+        message = message + " sending to: "
+        for neighbor in neighbors (node.getId(), num_procs):
+            message = message + str(neighbor) + " "
+        
         if (intermediate_work_done):
+        
             node.getLock().acquire()
             node.getSemaphore().release()
             node.setMessage (message)
-            
+   
             # get neighboring ports for message
             ports = []
             for neighbor in neighbors (node.getId(), num_procs):
@@ -204,5 +209,3 @@ if __name__ == "__main__":
     print ("ending program")
 
     pass
-
-
