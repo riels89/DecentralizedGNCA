@@ -80,3 +80,10 @@ class Node:
         return self.message
     def getId (self):
         return self.id
+        
+        
+        
+#Things to currently improve on!
+#   1. Stop busy waiting and use semaphores / equivelent to signal instead
+#   2. Figure out what is optimal for socket spawning
+#       a) aka figure if better to spawn at start and store, or spawn with each message

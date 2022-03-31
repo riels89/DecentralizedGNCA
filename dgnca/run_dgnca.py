@@ -83,6 +83,7 @@ def messanger_loop (node):
             return;
         # waits to give other messanger-server threads in node
         # a chance
+        # ** MIGHT NOT BE NECESSARY **
         wait (.01)
         
 
@@ -145,8 +146,18 @@ if __name__ == "__main__":
         
     for t in server_threads:
         t.join()
-    # now we have num_proc nodes
+    
     print("num connections=" + str(sum))
+# now we have num_proc nodes which we use to spawn num_proc*2 threads (or possible more later!)
+# which has one thread for the server,
+# and one (or possibly more) for the messanger.
+# Work is done on the server thread, which 
+# then constructs a string message, uses <string>.encode()
+# on the message, locks using the nodes shared lock,
+# then passes that into the node object
+# using node.setMessage (message).
+# after this, the lock is released, the server thread tries to recieve message
+# while the worker thread acquires the shared node lock, and sends the message.
     server_threads = []
     messanger_threads = []
     for nodes in servers:
