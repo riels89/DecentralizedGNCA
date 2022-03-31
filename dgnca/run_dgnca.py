@@ -8,8 +8,10 @@ from node import Node
 num_procs = -1
 host = 'localhost'
 port_seed = 2000
+BUFFER_SIZE = 512
 servers = []
 lock = threading.Lock()
+
 sum = 0
 
 def client (ip, port, message, wait, id, num_procs, s_time):
@@ -50,7 +52,8 @@ def init_threads (id, barrier):
     #print ("server " + str(i) + " created")
     server.listen (num_procs)
     node_lock = threading.Lock()
-    server_node = Node (server, id, port_seed+id, num_procs, node_lock)
+    sem = threading.Semaphore(1)
+    server_node = Node (server, id, port_seed+id, num_procs, node_lock, sem)
     lock.acquire()
     servers.append (server_node)
     lock.release()
@@ -66,51 +69,71 @@ def init_threads (id, barrier):
 
 
 # messanger loop
-def messanger_loop (node):
-
+def messanger_loop (id, node):
     while True:
         #acquires lock
+        node.getSemaphore().acquire()
         node.getLock().acquire()
         # checks if node has message to send
-        if (node.hasMessage):
+        if (node.hasMessage()):
+            # get ports of neighboring nodes to send to
             for port in (node.getMessagePorts()):
                 node.sendMessage (node.getMessage(), port)
             # all messages have been sent
             node.finishedMessages()
         node.getLock().release()
+        node.getSemaphore().release()
         
-        if (node.isDone())
-            return;
+        #print ("checking if done")
+        if (node.getIsDone()):
+            return
         # waits to give other messanger-server threads in node
         # a chance
         # ** MIGHT NOT BE NECESSARY **
-        wait (.01)
+        time.sleep (1)
         
 
 # ** main loop **
-def server_loop (node):
-    intermediate_work_done = False
+def server_loop (id, node):
+    intermediate_work_done = True
     all_finished = False
     
     message = "" + str (node.getId())
+    iters = 0
+    node.getSemaphore().acquire()
     while True:
         # do work
         # get work in byte stream to send
         # get and set message in node
-        node.getLock().acquire()
+        message = "hello from "+ str(node.getId()) + " " + str(iters) + " iters in"
         if (intermediate_work_done):
+            node.getLock().acquire()
+            node.getSemaphore().release()
             node.setMessage (message)
+            
+            # get neighboring ports for message
             ports = []
             for neighbor in neighbors (node.getId(), num_procs):
                 ports.append(port_seed + neighbor)
-        node.getLock().release()
-        # recieve messages
-        
+            node.setMessagePorts (ports)
+            
+            node.getLock().release()
+        # recieve messages from each neighbor
+        messages = []
+        for i in range(len(neighbors(node.getId(), num_procs))):
+            conn, addr = node.getServer().accept()
+            messages.append  (conn.recv(BUFFER_SIZE).decode("ascii"))
+            print (messages[i])
+        node.getSemaphore().acquire()
         # do more work
-        
+    
+    
         # check if done
-        if (all_finished)
+        if (iters > 2): #(all_finished)
+            node.setIsDone(True)
+            node.getSemaphore().release()
             return;
+        iters = iters + 1
      
 if __name__ == "__main__":
     #### Setup ####
@@ -119,14 +142,14 @@ if __name__ == "__main__":
     
     num_procs = 0
     if (len(sys.argv) != 2):
-        print ("invalid usage: lacking num_proccesses")
-        print ("valid usage: python run_dgnca <num processes>")
+        print ("invalid usage: incorrect number of arguments")
+        print ("python run_dgnca <num processes>")
         quit()
     try:
         num_procs = int(sys.argv[1])
         print (num_procs)
     except ValueError:
-        print ("invalid usage: please enter a processes count to a power of 2")
+        print ("invalid usage: please enter a processes count number to a power of 2")
         print ("valid usage: python run_dgnca <num processes>")
         quit()
        
@@ -149,8 +172,8 @@ if __name__ == "__main__":
     
     print("num connections=" + str(sum))
 # now we have num_proc nodes which we use to spawn num_proc*2 threads (or possible more later!)
-# which has one thread for the server,
-# and one (or possibly more) for the messanger.
+# which has one thread for the server, and one (or possibly more) for the messanger.
+# now we create threads, store them in respective arrays, then start them.
 # Work is done on the server thread, which 
 # then constructs a string message, uses <string>.encode()
 # on the message, locks using the nodes shared lock,
@@ -158,23 +181,28 @@ if __name__ == "__main__":
 # using node.setMessage (message).
 # after this, the lock is released, the server thread tries to recieve message
 # while the worker thread acquires the shared node lock, and sends the message.
-    server_threads = []
+    server_threads    = []
     messanger_threads = []
-    for nodes in servers:
-        m = threading.Thread (target=messanger_loop)
-        s = threading.Thread (target=server_loop)
     
-    print ("starting main loops")
-    for i in range(len(server_threads)):
-        #server_threads[i].start()
-        #messanger_threads[i].start()
-        
-    print ("ending program")
-    for i in range(len(server_threads)):
+    for i in range(len(servers)):
+        m = threading.Thread (target=messanger_loop, args=(i,servers[i]))
+        messanger_threads.append (m)
+        s = threading.Thread (target=server_loop,    args=(i,servers[i]))
+        server_threads.append    (s)
+    
+    # starts threads
+    for i in range(len(servers)):
+        server_threads[i].start()
+        messanger_threads[i].start()
+    
+    # joins threads and destroys sockets
+    for i in range(len(servers)):
         # join threads
-        #server_threads[i].join()
-        #messanger_threads[i].join()
-        #servers[i].getServer().close()
+        server_threads[i].join()
+        messanger_threads[i].join()
+        servers[i].getServer().close()
+    print ("ending program")
+
     pass
 
 

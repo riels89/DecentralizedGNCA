@@ -10,7 +10,7 @@ class Node:
     # takes in the server socket, the proccess id, port #, 
     # number of total processes, 
     # and a lock which is shared between messanger and server threads
-    def __init__(self, server, id, port, num_proc, lock):
+    def __init__(self, server, id, port, num_proc, lock, semaphore):
         self.id = id
         self.server = server
         self.port = port
@@ -20,6 +20,7 @@ class Node:
         self.message = ""
         self.message_ports = []
         self.lock = lock
+        self.semaphore = semaphore
         self.is_done = False
         # hashtable to get socket with id as key
         self.communicators = {}
@@ -36,7 +37,7 @@ class Node:
     def sendMessage (self, message, port):
         self.messanger = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.messanger.connect(('localhost', port))
-        sock.sendall(bytes(message, 'ascii'))
+        self.messanger.sendall(bytes(message, 'ascii'))
         
     # checks if has_message flag has been raised
     def hasMessage (self):
@@ -46,24 +47,25 @@ class Node:
     def finishedMessages (self):
         self.message = ""
         self.has_message = False
+        self.message_ports = []
     
 
     # set ports for message to receive
     def setMessagePorts (self, ports):
-        message_ports = ports
+        self.message_ports = ports
     
     # sets is_done flag, communicates to 
     # messangers that work is done
     def setIsDone (self, is_done):
-        is_done = is_done
+        self.is_done = is_done
         
-    
     # input message should use <string>.encode()
     # also sets has_message flag
     def setMessage (self, message):
         self.message = message
         self.has_message = True
-        # getters
+        
+    # getters
     def getMessagePorts (self):
         return self.message_ports
     def getServer (self):
@@ -73,13 +75,17 @@ class Node:
     def getCommunicators (self):
         return self.communicators
     def getLock(self):
-        return self.lock()
+        return self.lock
     def getPort (self):
         return self.port
     def getMessage (self):
         return self.message
     def getId (self):
         return self.id
+    def getIsDone (self):
+        return self.is_done
+    def getSemaphore (self):
+        return self.semaphore
         
         
         
