@@ -3,7 +3,13 @@ import threading
 import math
 from collections import namedtuple
 
+
+# node object, done to help with inter-processes
+# communication between messanger and server thread
 class Node:
+    # takes in the server socket, the proccess id, port #, 
+    # number of total processes, 
+    # and a lock which is shared between messanger and server threads
     def __init__(self, server, id, port, num_proc, lock):
         self.id = id
         self.server = server
@@ -14,6 +20,7 @@ class Node:
         self.message = ""
         self.message_ports = []
         self.lock = lock
+        self.is_done = False
         # hashtable to get socket with id as key
         self.communicators = {}
 
@@ -31,7 +38,7 @@ class Node:
         self.messanger.connect(('localhost', port))
         sock.sendall(bytes(message, 'ascii'))
         
-    # checks if message flag has been raised
+    # checks if has_message flag has been raised
     def hasMessage (self):
         return self.has_message
         
@@ -44,8 +51,15 @@ class Node:
     # set ports for message to receive
     def setMessagePorts (self, ports):
         message_ports = ports
+    
+    # sets is_done flag, communicates to 
+    # messangers that work is done
+    def setIsDone (self, is_done):
+        is_done = is_done
         
+    
     # input message should use <string>.encode()
+    # also sets has_message flag
     def setMessage (self, message):
         self.message = message
         self.has_message = True

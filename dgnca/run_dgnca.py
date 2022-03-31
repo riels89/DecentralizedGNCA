@@ -78,25 +78,38 @@ def messanger_loop (node):
             # all messages have been sent
             node.finishedMessages()
         node.getLock().release()
-        wait (.1)
+        
+        if (node.isDone())
+            return;
+        # waits to give other messanger-server threads in node
+        # a chance
+        wait (.01)
+        
 
 # ** main loop **
 def server_loop (node):
-    work_done = False
+    intermediate_work_done = False
+    all_finished = False
+    
     message = "" + str (node.getId())
     while True:
         # do work
         # get work in byte stream to send
         # get and set message in node
         node.getLock().acquire()
-        if (work_done):
+        if (intermediate_work_done):
             node.setMessage (message)
             ports = []
             for neighbor in neighbors (node.getId(), num_procs):
-                ports.append(node.getPort() + neighbor)
+                ports.append(port_seed + neighbor)
         node.getLock().release()
         # recieve messages
- 
+        
+        # do more work
+        
+        # check if done
+        if (all_finished)
+            return;
      
 if __name__ == "__main__":
     #### Setup ####
