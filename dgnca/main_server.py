@@ -8,31 +8,20 @@ from _thread import *
 import threading
 import json
 
-from dgnca import select_node
-
-
-port = 8080
+port = 8083
 host = 'localhost'
 print_lock = threading.Lock()
 
 
-def threaded(client, id, port, neighbor_ports, node_order):
+def threaded(client, id, port, neighbor_ports):
 
-    in_node_order = "T" if id in node_order[0] else "F"
-    num_to_recieve = 0
-    if in_node_order == "F":
-        for neighbor_id in neighbor_ports.keys():
-            if neighbor_id in node_order[0]:
-                num_to_recieve += 1
-
-    print(node_order[0])
-    encoded_neighbors = str.encode(json.dumps(neighbor_ports) + f"{id:03d}{port:05d}{in_node_order}{num_to_recieve:03d}")
+    encoded_neighbors = str.encode(json.dumps(neighbor_ports) + f"{id:03d}{port:05d}")
     print(f"{id} {neighbor_ports}")
     client.send(encoded_neighbors)
 
     data = str(client.recv(1024), 'ascii')
     print(f"{id} recieved: {data}")
-    if data != "finished_round" and data != "all_connected":
+    if data != "all_connected":
         print(f"{id} received something other than \'finished_round\'")
         client.close()
         return
@@ -46,13 +35,11 @@ if __name__ == "__main__":
 
     #### Setup ####
     g = pygsp.graphs.Grid2d()
-    adj = np.squeeze(np.asarray(g.W.todense()))[:50, :50]
+    adj = np.squeeze(np.asarray(g.W.todense()))[:100, :100]
     # adj = np.array([[0, 1, 1, 0],
     #                 [1, 0, 1, 1],
     #                 [1, 1, 0, 1],
     #                 [0, 1, 1, 0]])
-    node_order = select_node(adj)
-    print(f'node order {node_order}')
 
     n = adj.shape[0]
     print(n)
@@ -84,7 +71,7 @@ if __name__ == "__main__":
             print(f"{id} neighbor list: {neighbor_list}")
             neighbor_ports = {neighbor_id: ports[neighbor_id] for neighbor_id in neighbor_list}
 
-            start_new_thread(threaded, (client, id, ports[id], neighbor_ports, node_order))
+            start_new_thread(threaded, (client, id, ports[id], neighbor_ports))
 
         while True:
             pass
