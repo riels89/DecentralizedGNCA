@@ -3,6 +3,7 @@ import numpy as np
 
 
 def select_node(adjacency):
+    adjacency = np.copy(adjacency)
 
     n, _ = adjacency.shape
     ids = list(range(n))
@@ -67,6 +68,11 @@ if __name__ == "__main__":
                     [0, 1, 0, 0, 0, 1, 0]])
     order = select_node(adj)
     print(order)
+
+    import pygsp
+    g = pygsp.graphs.Grid2d()
+    adj = np.squeeze(np.asarray(g.W.todense()))
+    print(select_node(adj))
 
         
 
