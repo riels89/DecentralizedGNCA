@@ -1,7 +1,7 @@
 spektral==1.0.6
 numpy
 networkx
-pandas=
+pandas
 PyGSP
 scikit-learn
 scipy
