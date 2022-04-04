@@ -8,7 +8,7 @@ from _thread import *
 import threading
 import json
 
-port = 8083
+port = 8087
 host = 'localhost'
 print_lock = threading.Lock()
 
@@ -16,17 +16,15 @@ print_lock = threading.Lock()
 def threaded(client, id, port, neighbor_ports):
 
     encoded_neighbors = str.encode(json.dumps(neighbor_ports) + f"{id:03d}{port:05d}")
-    print(f"{id} {neighbor_ports}")
     client.send(encoded_neighbors)
 
-    data = str(client.recv(1024), 'ascii')
-    print(f"{id} recieved: {data}")
+    data = str(client.recv(4024), 'ascii')
     if data != "all_connected":
-        print(f"{id} received something other than \'finished_round\'")
+        print(f"{id} received something other than \'finished_round\': {data}")
         client.close()
         return
-    
-    print("Finished")
+    else:
+        print(f"{id} all connected")
 
     client.close()
 
@@ -35,7 +33,7 @@ if __name__ == "__main__":
 
     #### Setup ####
     g = pygsp.graphs.Grid2d()
-    adj = np.squeeze(np.asarray(g.W.todense()))[:100, :100]
+    adj = np.squeeze(np.asarray(g.W.todense()))[:256, :256]
     # adj = np.array([[0, 1, 1, 0],
     #                 [1, 0, 1, 1],
     #                 [1, 1, 0, 1],
@@ -68,7 +66,6 @@ if __name__ == "__main__":
 
             #print_lock.acquire()
             neighbor_list = neighbors[id]
-            print(f"{id} neighbor list: {neighbor_list}")
             neighbor_ports = {neighbor_id: ports[neighbor_id] for neighbor_id in neighbor_list}
 
             start_new_thread(threaded, (client, id, ports[id], neighbor_ports))

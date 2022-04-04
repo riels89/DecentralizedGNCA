@@ -9,7 +9,7 @@ import copy
 import os
 
 host = 'localhost'
-port = 8083
+port = 8087
 
 def wait_for_port(id, host, port_to_conn, timeout=5.0):
     """
@@ -28,7 +28,7 @@ def wait_for_port(id, host, port_to_conn, timeout=5.0):
                 raise TimeoutError('{} Waited too long for the port {} on host {} to start accepting '
                                    'connections.'.format(id, port_to_conn, host)) from e
 
-def listen_for_neighbors(id, node_port, connection_dict, mutex): 
+def listen_for_neighbors(id, node_port, connection_dict, mutex, main_sock): 
     mutex.acquire()
     it_dict = copy.deepcopy(connection_dict)
     mutex.release()
@@ -40,7 +40,13 @@ def listen_for_neighbors(id, node_port, connection_dict, mutex):
 
     for i in range(num_to_recieve):
         conn = socket.create_server((host, node_port), backlog=len(connection_dict))
-        conn, addr = conn.accept()
+        conn.settimeout(20)
+        try:
+            conn, addr = conn.accept()
+        except Exception as e:
+            main_sock.send((f"Error: failed to accept \n" + str(e)).encode())
+            raise Exception(f"{id}, failed to accept") from e
+
         if conn == 0:
             raise Exception(f"Failed to create listening connection.")
         else:
@@ -59,10 +65,9 @@ def listen_for_neighbors(id, node_port, connection_dict, mutex):
             raise Exception(f"{id} listen {neighbor_id} not in dict")
         connection_dict[neighbor_id] = conn
         mutex.release()
-        time.sleep(0.2)
 
 
-def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex):
+def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex, main_sock):
     mutex.acquire()
     it_dict = copy.deepcopy(connection_dict)
     mutex.release()
@@ -70,7 +75,7 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex):
         if int(neighbor_id) > id:
             continue
 
-        conn = wait_for_port(id, host, neighbor_ports[neighbor_id])
+        conn = wait_for_port(id, host, neighbor_ports[neighbor_id], timeout=20)
 
         if conn == 0:
             raise Exception(f"Failed to create connection from {id} to {neighbor_id}")
@@ -80,6 +85,7 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex):
         try:
             conn.send(str(id).encode())
         except Exception as e:
+            main_sock.send(("Error: \n" + str(e)).encode())
             raise Exception(f"{id}, failed to send to {neighbor_id}") from e
 
         mutex.acquire()
@@ -88,8 +94,6 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex):
             raise Exception(f"{id} conn {neighbor_id} not in dict")
         connection_dict[neighbor_id] = conn
         mutex.release()
-        time.sleep(0.2)
-
 
 def createClient():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -109,8 +113,8 @@ def createClient():
     #     print(f"{1} {connection_dict}")
 
     mutex = threading.Lock()
-    listening_thread = threading.Thread (target = listen_for_neighbors, args=(id, node_port, connection_dict, mutex))
-    connecting_thread = threading.Thread (target = connect_to_neighbors, args=(id, neighbor_ports, connection_dict, mutex))
+    listening_thread = threading.Thread (target = listen_for_neighbors, args=(id, node_port, connection_dict, mutex, sock))
+    connecting_thread = threading.Thread (target = connect_to_neighbors, args=(id, neighbor_ports, connection_dict, mutex, sock))
     listening_thread.start()
     connecting_thread.start()
     listening_thread.join()
@@ -122,19 +126,20 @@ def createClient():
     sock.close()
 
 if __name__ == "__main__":
-    num_procs = 100
+    createClient()
+    # num_procs = 100
     
-    threads = []
-    for i in range(num_procs):
-        thread = threading.Thread (target = createClient)
+    # threads = []
+    # for i in range(num_procs):
+        # thread = threading.Thread (target = createClient)
         # pid = os.fork()
         # if pid == 0:
         #     createClient()
-        threads.append(thread)
-        thread.start()
+        # threads.append(thread)
+        # thread.start()
     
-    for thread in threads:
-        thread.join()
+    # for thread in threads:
+    #     thread.join()
     
     # print(f'Created: {len(threads)} clients')
 
