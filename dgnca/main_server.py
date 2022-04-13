@@ -8,7 +8,7 @@ from _thread import *
 import threading
 import json
 
-port = 8087
+port = 8088
 host = 'localhost'
 print_lock = threading.Lock()
 
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     #### Setup ####
     g = pygsp.graphs.Grid2d()
-    adj = np.squeeze(np.asarray(g.W.todense()))[:256, :256]
+    adj = np.squeeze(np.asarray(g.W.todense()))[:2, :2]
     # adj = np.array([[0, 1, 1, 0],
     #                 [1, 0, 1, 1],
     #                 [1, 1, 0, 1],

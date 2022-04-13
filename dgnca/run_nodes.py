@@ -9,7 +9,8 @@ import copy
 import os
 
 host = 'localhost'
-port = 8087
+port = 8088
+b = threading.Barrier(2)
 
 def wait_for_port(id, host, port_to_conn, timeout=5.0):
     """
@@ -32,6 +33,7 @@ def listen_for_neighbors(id, node_port, connection_dict, mutex, main_sock):
     mutex.acquire()
     it_dict = copy.deepcopy(connection_dict)
     mutex.release()
+    b.wait()
 
     num_to_recieve = 0
     for neighbor_id in it_dict.keys():
@@ -71,6 +73,8 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex, main_sock):
     mutex.acquire()
     it_dict = copy.deepcopy(connection_dict)
     mutex.release()
+    b.wait()
+
     for neighbor_id, conn in it_dict.items():
         if int(neighbor_id) > id:
             continue
@@ -113,11 +117,10 @@ def createClient():
     #     print(f"{1} {connection_dict}")
 
     mutex = threading.Lock()
-    listening_thread = threading.Thread (target = listen_for_neighbors, args=(id, node_port, connection_dict, mutex, sock))
     connecting_thread = threading.Thread (target = connect_to_neighbors, args=(id, neighbor_ports, connection_dict, mutex, sock))
-    listening_thread.start()
     connecting_thread.start()
-    listening_thread.join()
+
+    listen_for_neighbors(id, node_port, connection_dict, mutex, sock)
     connecting_thread.join()
 
     sock.send(b"all_connected")
