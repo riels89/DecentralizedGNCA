@@ -1,5 +1,6 @@
 import socket
 import json
+from pexpect import ExceptionPexpect
 
 from sklearn import neighbors
 
@@ -28,6 +29,10 @@ def wait_for_port(id, host, port_to_conn, timeout=5.0):
                 # print(f"{id} {end_time - start_time}")
                 raise TimeoutError('{} Waited too long for the port {} on host {} to start accepting '
                                    'connections.'.format(id, port_to_conn, host)) from e
+        except Exception as e:
+            raise Exception('{} Error waiting for the port {} on host {} to start accepting '
+                                'connections.'.format(id, port_to_conn, host)) from e
+
 
 def listen_for_neighbors(id, node_port, connection_dict, mutex, main_sock): 
     mutex.acquire()
@@ -40,13 +45,13 @@ def listen_for_neighbors(id, node_port, connection_dict, mutex, main_sock):
         if int(neighbor_id) > id:
             num_to_recieve += 1
 
+    serv = socket.create_server((host, node_port), backlog=len(connection_dict))
+    serv.settimeout(20)
     for i in range(num_to_recieve):
-        conn = socket.create_server((host, node_port), backlog=len(connection_dict))
-        conn.settimeout(20)
         try:
-            conn, addr = conn.accept()
+            conn, addr = serv.accept()
         except Exception as e:
-            main_sock.send((f"Error: failed to accept \n" + str(e)).encode())
+            main_sock.send((f"Error: failed to accept \n" + f"\ndict: {connection_dict}" + str(e)).encode())
             raise Exception(f"{id}, failed to accept") from e
 
         if conn == 0:
@@ -54,12 +59,14 @@ def listen_for_neighbors(id, node_port, connection_dict, mutex, main_sock):
         else:
             # print(f"{id} Got connection")
             pass
+
         try:
             neighbor_id = conn.recv(512).decode("ascii")
         except Exception as e:
             # print("FAIL")
             raise Exception("f{id} failed to recv") from e
         # print(f"{id} successfully got connection {neighbor_id}")
+        print(f"{id}: Got connection to {neighbor_id}")
 
         mutex.acquire()
         if neighbor_id not in connection_dict:
@@ -78,13 +85,14 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex, main_sock):
     for neighbor_id, conn in it_dict.items():
         if int(neighbor_id) > id:
             continue
+        print(f"{id}: connecting to {neighbor_id}")
 
         conn = wait_for_port(id, host, neighbor_ports[neighbor_id], timeout=20)
 
         if conn == 0:
             raise Exception(f"Failed to create connection from {id} to {neighbor_id}")
         else:
-            # print(f"{id} successfully connected to {neighbor_id}")
+            print(f"{id}: successfully connected to {neighbor_id}")
             pass
         try:
             conn.send(str(id).encode())
@@ -98,19 +106,9 @@ def connect_to_neighbors(id, neighbor_ports, connection_dict, mutex, main_sock):
             raise Exception(f"{id} conn {neighbor_id} not in dict")
         connection_dict[neighbor_id] = conn
         mutex.release()
+        print(f"{id}: Connected to {neighbor_id}")
 
-def createClient():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    # Connecting to the socket
-    sock.connect((host, port))
-
-    # Sending a message
-    data = sock.recv(100000).decode('ascii')
-    node_port = int(data[-5:])
-    id = int(data[-8:-5])
-    neighbor_ports = json.loads(data[:-8])
-    connection_dict = {neighbor_id: None for neighbor_id in neighbor_ports.keys()}
+def start_client(sock, id, node_port, neighbor_ports, connection_dict):
     # print(f"{id} {neighbor_ports}")
 
     # if id == 1:
@@ -128,8 +126,26 @@ def createClient():
     
     sock.close()
 
+def start_client_error_wrapper():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Connecting to the socket
+    sock.connect((host, port))
+    # Sending a message
+    data = sock.recv(100000).decode('ascii')
+    node_port = int(data[-5:])
+    id = int(data[-8:-5])
+    neighbor_ports = json.loads(data[:-8])
+    connection_dict = {neighbor_id: None for neighbor_id in neighbor_ports.keys()}
+
+    try:
+        start_client(sock, id, node_port, neighbor_ports, connection_dict)
+    except Exception as e:
+            sock.send(("Error: \n" + str(e)).encode())
+            raise Exception(f"Uknown error") from e
+ 
+
 if __name__ == "__main__":
-    createClient()
+    start_client_error_wrapper()
     # num_procs = 100
     
     # threads = []
