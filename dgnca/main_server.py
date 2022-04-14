@@ -4,7 +4,6 @@ import pygsp
 import numpy as np
 from random import randint
 
-from _thread import *
 import threading
 import json
 
@@ -13,7 +12,7 @@ host = 'localhost'
 print_lock = threading.Lock()
 
 
-def threaded(client, id, port, neighbor_ports):
+def sync_nodes(client, id, port, neighbor_ports):
 
     encoded_neighbors = str.encode(json.dumps(neighbor_ports) + f"{id:03d}{port:05d}")
     client.send(encoded_neighbors)
@@ -33,14 +32,14 @@ if __name__ == "__main__":
 
     #### Setup ####
     g = pygsp.graphs.Grid2d()
-    adj = np.squeeze(np.asarray(g.W.todense()))[:2, :2]
+    adj = np.squeeze(np.asarray(g.W.todense()))[:256, :256]
     # adj = np.array([[0, 1, 1, 0],
     #                 [1, 0, 1, 1],
     #                 [1, 1, 0, 1],
     #                 [0, 1, 1, 0]])
 
     n = adj.shape[0]
-    print(n)
+    print(f"Starting server with {n} nodes")
     ids = range(n)
     neighbors = {i:[int(num) for num in np.where(adj[i])[0]] for i in ids}
 
@@ -59,41 +58,22 @@ if __name__ == "__main__":
     print("Listening on", (host, port))
 
     # Event Loop
+    threads = []
     try:
         for id in ids:
             # accept connection from client
             client, addr = mainServer.accept()
 
-            #print_lock.acquire()
             neighbor_list = neighbors[id]
             neighbor_ports = {neighbor_id: ports[neighbor_id] for neighbor_id in neighbor_list}
 
-            start_new_thread(threaded, (client, id, ports[id], neighbor_ports))
+            thread = threading.Thread(target=sync_nodes, args=(client, id, ports[id], neighbor_ports))
+            thread.start()
+            threads.append(thread)
 
-        while True:
-            pass
     except KeyboardInterrupt:
         print("\nUser ended session")
     finally:
+        for thread in threads:
+            thread.join()
         mainServer.close()
-
-
-    # load model
-    # load data
-    # Connect to main node
-    # get rank from main node
-    # use rank to choose data to use
-    # connected to neighbors
-
-    ### Main loop ###
-    # while no stop signal
-    #   Compute update
-    #   Check for stop signal
-
-    #   Broadcast update using tcp
-    #   Check for stop signal
-
-    #   Retrieve update from tcp buffer
-    #   Update data buffer
-    pass
-    
