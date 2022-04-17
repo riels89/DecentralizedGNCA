@@ -17,7 +17,7 @@ def wait_timeout(proc, seconds, start_time):
         time.sleep(interval)
 
 
-num_nodes = 256
+num_nodes = 400
 subprocesses = []
 
 for i in range(num_nodes):

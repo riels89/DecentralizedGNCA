@@ -1,20 +1,28 @@
 import socket
 import json
+import tensorflow as tf
+import keras
+import numpy as np
 
 import threading
 import time
 import copy
+from io import StringIO
+
+
+from dgnca import DecentralizedGNN
 
 host = 'localhost'
-port = 8088
+port = 8081
 
 class Node():
 
-    def __init__(self, id, main_sock, server_port, neighbor_ports) -> None:
+    def __init__(self, id, main_sock, server_port, neighbor_ports, h_dict) -> None:
         self.id = id
         self.main_sock = main_sock
         self.server_port = server_port
         self.neighbor_ports = neighbor_ports
+        self.h_dict = h_dict
         self.connection_dict = {neighbor_id: None for neighbor_id in neighbor_ports.keys()}
 
 def wait_for_port(id, host, port_to_conn, timeout=5.0):
@@ -122,13 +130,67 @@ def connect_to_main():
     data = main_sock.recv(100000).decode('ascii')
     server_port = int(data[-5:])
     id = int(data[-8:-5])
-    neighbor_ports = json.loads(data[:-8])
+    dict_list = json.loads(data[:-8])
+    neighbor_ports = dict_list[0]
+    h_dict = dict_list[1]
 
-    return Node(id=id, main_sock=main_sock, server_port=server_port, neighbor_ports=neighbor_ports)
+    return Node(id=id, main_sock=main_sock, server_port=server_port, neighbor_ports=neighbor_ports, h_dict=h_dict)
+
+def load_model(x):
+    loaded_model = keras.models.load_model("results/grid2d/model").get_layer(name="general_gnn")
+
+    dec_model = DecentralizedGNN(2, message_passing=1, pool=None, batch_norm=False, hidden_activation="relu")
+    dec_model(x)
+    # x = keras.Input([4, 2])
+    # keras.Model(inputs=x, outputs=dec_model.call(x)).summary()
+
+    weight_mapping = {"mlp": "mlp", "mlp_1": "mlp_1", "general_conv": "general_conv_wrapper"}
+    dec_model.load_weights_from_spektral(loaded_model, weight_mapping)
+
+    return dec_model
+
+def make_input_tensor(node: Node):
+    # make h_list, this nodes h must be first
+    # This is assuming neighbor h doesn't matter, which is true for addition connectivity
+    h_list = [node.h_dict[str(node.id)], *[node.h_dict[nid] for nid in node.connection_dict.keys()]]
+    # print(f"{node.id}: {h_list}")
+
+    return tf.expand_dims(tf.convert_to_tensor(h_list), axis=0)
+
+def send_h(h, node: Node):
+    serialized = np.array2string(h.numpy(), precision=32, separator=",").encode()
+    # print(f"{node.id}: {serialized}")
+    for conn in node.connection_dict.values():
+        # conn.send(tf.io.serialize_tensor(h))
+        conn.send(serialized)
+
+def recv_h(node: Node):
+    for nid, conn in node.connection_dict.items():
+        data = conn.recv(10000).decode("ascii")
+        h = np.fromstring(data[1:-1].replace(" ", ""), dtype=np.float32, sep=',')
+        print(f"{data}: {h}")
+        node.h_dict[nid] = h 
 
 if __name__ == "__main__":
     node = connect_to_main()
     connect_neighbors(node)
+    h = make_input_tensor(node)
+    model = load_model(h)
+    local_h = model(h)
+
+    for i in range(10):
+        local_h = tf.reshape(model(h), -1)
+        send_h(local_h, node)
+        recv_h(node)
+        node.h_dict[node.id] = local_h.numpy()
+        h = make_input_tensor(node)
+        time.sleep(2.0)
+
+    serialized = np.array2string(local_h.numpy(), precision=32, separator=",").encode()
+    node.main_sock.send(serialized)
+
+
+
 
     # num_procs = 100
     
