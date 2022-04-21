@@ -17,14 +17,13 @@ port = 8055
 host = 'localhost'
 lock = threading.Lock()
 points = []
-agreement = 0
+#agreement = 0
 nprocs = 0
 # constant num, matches # of rounds done in run_nodes
 rounds = 10
 
 def sync_nodes(client, id, port, neighbor_ports, h_dict, barrier):
 
-    global agreement
     global rounds
     sys.stdout.flush()
     encoded_neighbors = str.encode(json.dumps([neighbor_ports, h_dict]) + f"{id:03d}{port:05d}")
@@ -36,6 +35,8 @@ def sync_nodes(client, id, port, neighbor_ports, h_dict, barrier):
         return
     else:
         print(f"{id} all connected")
+    
+    # now starting round-timestep confirmations
     i = 0
     while (i < rounds):
         code = client.recv(100).decode("ascii")
@@ -43,8 +44,6 @@ def sync_nodes(client, id, port, neighbor_ports, h_dict, barrier):
             print ("round " +str(i)+" finished for proc " + str(id) + "\n")
             barrier.wait()
             client.send (str.encode("next_round"))
-            #arrier.wait()
-            # reset agreement value
         else:
             print ("ERROR: Invalid msg recv ("+code+") from client " +str(id)+" in server")
             break
@@ -54,15 +53,7 @@ def sync_nodes(client, id, port, neighbor_ports, h_dict, barrier):
     h = np.fromstring(data[1:-1].replace(" ", ""), dtype=np.float32, sep=',')
     lock.acquire()
     points.append(h)
-    # agreement that all work this round is finished
-    agreement = agreement + 1
     lock.release()
-    # now loop until agreement is reached
-    while (nprocs != agreement):
-        #print (str(id) + " is now waiting on agreement and agreement is " + str (agreement))
-        #sys.stdout.flush()
-        time.sleep(.1)
-
 
     client.close()
 
