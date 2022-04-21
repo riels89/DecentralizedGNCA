@@ -3,6 +3,7 @@ import json
 import tensorflow as tf
 import keras
 import numpy as np
+import sys
 
 import threading
 import time
@@ -13,7 +14,7 @@ from io import StringIO
 from dgnca import DecentralizedGNN
 
 host = 'localhost'
-port = 8081
+port = 8055
 
 class Node():
 
@@ -159,7 +160,7 @@ def make_input_tensor(node: Node):
 
 def send_h(h, node: Node):
     serialized = np.array2string(h.numpy(), precision=32, separator=",").encode()
-    # print(f"{node.id}: {serialized}")
+    print(f"{node.id}: {serialized}")
     for conn in node.connection_dict.values():
         # conn.send(tf.io.serialize_tensor(h))
         conn.send(serialized)
@@ -168,7 +169,7 @@ def recv_h(node: Node):
     for nid, conn in node.connection_dict.items():
         data = conn.recv(10000).decode("ascii")
         h = np.fromstring(data[1:-1].replace(" ", ""), dtype=np.float32, sep=',')
-        print(f"{data}: {h}")
+        #print(f"{data}: {h}")
         node.h_dict[nid] = h 
 
 if __name__ == "__main__":
@@ -184,7 +185,12 @@ if __name__ == "__main__":
         recv_h(node)
         node.h_dict[node.id] = local_h.numpy()
         h = make_input_tensor(node)
-        time.sleep(2.0)
+        # now send to main that round is finished
+        node.main_sock.send (str.encode("round_finished"))
+        # wait for main to send signal to start next round
+        msg = node.main_sock.recv (100).decode("ascii")
+        if (msg != "next_round"):
+            print ("ERROR: Invalid msg recv from server in client " + str(id))
 
     serialized = np.array2string(local_h.numpy(), precision=32, separator=",").encode()
     node.main_sock.send(serialized)
