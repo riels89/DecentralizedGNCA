@@ -182,20 +182,19 @@ if __name__ == "__main__":
     for i in range(10):
         # do round work
         local_h = tf.reshape(model(h), -1)
-        send_h(local_h, node)
-
-        recv_h(node)
-
-        node.h_dict[node.id] = local_h.numpy()
-        # now that sends 2 neighbors are done, wait for signal from main
         node.main_sock.send (str.encode("round_finished"))
         # wait for main to send signal to continue round
         msg = node.main_sock.recv (100).decode("ascii")
         if (msg != "next_round"):
             print ("ERROR: Invalid msg ("+msg+") recv from server in client " + str(id))
         # now recv and continue
+        send_h(local_h, node)
+
+        recv_h(node)
+
+        
+        node.h_dict[node.id] = local_h.numpy()
         h = make_input_tensor(node)
-        # *** round work finished ***
 
 
     serialized = np.array2string(local_h.numpy(), precision=32, separator=",").encode()

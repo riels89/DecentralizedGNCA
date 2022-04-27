@@ -35,7 +35,7 @@ def sync_nodes(client, id, port, neighbor_ports, h_dict, barrier):
         return
     else:
         print(f"{id} all connected")
-    
+    barrier.wait()
     # now starting round-timestep confirmations
     i = 0
     while (i < rounds):
@@ -66,6 +66,7 @@ if __name__ == "__main__":
     g = NormalizeSphere()(g)
     #print(g)
     n = 16
+    
     nprocs = n
     adj = np.squeeze(np.asarray(g.a.todense()))[:n, :n]
     # a = sp_matrix_to_sp_tensor(g.a)
