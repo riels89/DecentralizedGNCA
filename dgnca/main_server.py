@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from gnca.modules.graphs import get_cloud
 from gnca.modules.init_state import SphericalizeState
 
-port = 8055
+port = 8056
 host = 'localhost'
 lock = threading.Lock()
 points = []
@@ -62,10 +62,10 @@ if __name__ == "__main__":
 
     #### Setup ####
     # g = pygsp.graphs.Grid2d()
-    g = get_cloud("Grid2d", N1=20, N2=20)
+    g = get_cloud("Grid2d", N1=10, N2=10)
     g = NormalizeSphere()(g)
     #print(g)
-    n = 16
+    n = 100
     
     nprocs = n
     adj = np.squeeze(np.asarray(g.a.todense()))[:n, :n]
@@ -129,6 +129,6 @@ points = np.vstack(points)
 # cmap = plt.get_cmap("Set2")
 plt.scatter(points[:, 0], points[:, 1], marker=".", s=1)
 plt.tight_layout()
-plt.savefig(f"decentralized_endstate.pdf")
+plt.savefig(f"decentralized_endstate.png")
 # plt.show()
 mainServer.close()

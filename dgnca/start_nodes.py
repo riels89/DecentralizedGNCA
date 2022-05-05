@@ -17,14 +17,14 @@ def wait_timeout(proc, seconds, start_time):
         time.sleep(interval)
 
 
-num_nodes = 16
+num_nodes = 100
 subprocesses = []
 print ("Spawning " + str(num_nodes) + " nodes")
 for i in range(num_nodes):
     proc = subprocess.Popen(["python", "dgnca/run_nodes.py"])
     subprocesses.append(proc)
 
-seconds = 180
+seconds = 250
 start = time.time()
 for subp in subprocesses:
     wait_timeout(subp, seconds=seconds, start_time=start)

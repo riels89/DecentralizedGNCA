@@ -14,7 +14,7 @@ from io import StringIO
 from dgnca import DecentralizedGNN
 
 host = 'localhost'
-port = 8055
+port = 8056
 
 class Node():
 
@@ -138,9 +138,9 @@ def connect_to_main():
     return Node(id=id, main_sock=main_sock, server_port=server_port, neighbor_ports=neighbor_ports, h_dict=h_dict)
 
 def load_model(x):
-    loaded_model = keras.models.load_model("results/grid2d/model").get_layer(name="general_gnn")
+    loaded_model = keras.models.load_model("smaller_results/Grid2d/model").get_layer(name="general_gnn")
 
-    dec_model = DecentralizedGNN(2, message_passing=1, pool=None, batch_norm=False, hidden_activation="relu")
+    dec_model = DecentralizedGNN(2, activation="tanh", message_passing=1, pool=None, batch_norm=False, hidden_activation="relu")
     dec_model(x)
     # x = keras.Input([4, 2])
     # keras.Model(inputs=x, outputs=dec_model.call(x)).summary()
