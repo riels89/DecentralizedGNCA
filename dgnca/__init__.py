@@ -1,2 +1,1 @@
 from dgnca.decentralized_gnn import DecentralizedGNN
-from dgnca.node_selection import select_node
